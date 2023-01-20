@@ -39,6 +39,9 @@ body {
   font-size: 2rem;
   margin-left: 1rem;
 }
+.header-current-location {
+  font-size: 1rem;
+}
 .header-right {
   display: grid;
   width: 50%;
