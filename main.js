@@ -2,6 +2,11 @@ import '/style.css';
 import { getWeather } from './public/icons/weather';
 import { ICON_MAP } from './iconMap';
 
+let current_page = 1;
+let rows = 10;
+
+let hourlyData = null;
+
 navigator.geolocation.getCurrentPosition(positionSuccess, positionSuccess);
 
 function positionSuccess({ coords }) {
@@ -12,6 +17,9 @@ function positionSuccess({ coords }) {
   )
     .then((data) => {
       renderWeather(data);
+      let { hourly } = data;
+      hourlyData = hourly;
+      setupPagination(hourlyData, rows);
     })
     .catch((err) => {
       console.log(err);
@@ -27,7 +35,7 @@ function positionError() {
 function renderWeather({ current, daily, hourly }) {
   renderCurrentWeather(current);
   renderDailyWeather(daily);
-  renderHourlyWeather(hourly);
+  renderHourlyWeather(hourly, false);
 
   document.body.classList.remove('blurred');
 }
@@ -74,8 +82,14 @@ function renderDailyWeather(daily) {
 const HOUR_FORMATTER = new Intl.DateTimeFormat(undefined, { hour: 'numeric' });
 const hourlySection = document.querySelector('[data-hour-section]');
 const hourRowTemplate = document.getElementById('hour-row-template');
-function renderHourlyWeather(hourly) {
+
+export function renderHourlyWeather(hourly, clicked) {
   hourlySection.innerHTML = '';
+
+  if (!clicked) {
+    hourly = displayNumOfHourlyData(hourly, rows, current_page);
+  }
+
   hourly.forEach((hour) => {
     const element = hourRowTemplate.content.cloneNode(true);
     setValue('temp', hour.temp, { parent: element });
@@ -89,4 +103,51 @@ function renderHourlyWeather(hourly) {
     element.querySelector('[data-icon]').src = getIconUrl(hour.iconCode);
     hourlySection.append(element);
   });
+}
+
+export function displayNumOfHourlyData(items, rows_per_page, page) {
+  page--;
+
+  let start = rows_per_page * page;
+  let end = start + rows_per_page;
+
+  let paginatedItems = items.slice(start, end);
+
+  return paginatedItems;
+}
+
+export function setupPagination(items, rows_per_page) {
+  let paginationWrapper = document.querySelector('.pagination');
+  paginationWrapper.innerHTML = '';
+
+  let page_count = Math.ceil(items.length / rows_per_page);
+
+  for (let i = 1; i < page_count + 1; i++) {
+    let btn = paginationButton(i, items, rows_per_page);
+    paginationWrapper.appendChild(btn);
+  }
+}
+
+function paginationButton(page, items, rows_per_page) {
+  let button = document.createElement('button');
+  button.innerText = page;
+
+  if (current_page == page) {
+    button.classList.add('active');
+  }
+
+  button.addEventListener('click', () => {
+    current_page = page;
+
+    items = displayNumOfHourlyData(hourlyData, rows_per_page, current_page);
+
+    renderHourlyWeather(items, true);
+
+    let current_btn = document.querySelector('.pagination button.active');
+    current_btn.classList.remove('active');
+
+    button.classList.add('active');
+  });
+
+  return button;
 }
